@@ -3,10 +3,12 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'   # déclenche le workflow si un tag commence par "v"
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: devops-tp-docker  # nom exact de ton image
+  IMAGE_NAME: devops-tp-docker
 
 jobs:
   build-and-push:
@@ -28,9 +30,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/xarvix2/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/xarvix2/${{ env.IMAGE_NAME }}:main
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Show image digest
+        run: echo ${{ steps.meta.outputs.digest }}
