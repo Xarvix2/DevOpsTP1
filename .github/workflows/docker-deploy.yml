@@ -2,9 +2,9 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ main ]
-    tags:
-      - 'v*'   # déclenche le workflow si un tag commence par "v"
+    branches: [ main ]     # déclenche sur push vers main
+    tags:                   # déclenche aussi sur tags
+      - 'v*'                # tout tag commençant par "v", ex: v1.0.0
 
 env:
   REGISTRY: ghcr.io
@@ -30,26 +30,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/xarvix2/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Show image digest
-        run: echo ${{ steps.meta.outputs.digest }}
+          tags: |
+            ${{ env.REGISTRY }}/xarvix2/${{ env.IMAGE_NAME }}:main
+            ${{ env.REGISTRY }}/xarvix2/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
